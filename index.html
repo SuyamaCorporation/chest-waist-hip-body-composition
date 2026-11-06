@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>体型スリーサイズ目標設定ツール</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .bar-fill { transition: width 0.6s ease; }
+  .badge-shine { animation: shine 2s ease-in-out infinite; }
+  @keyframes shine { 0%,100%{opacity:1} 50%{opacity:0.6} }
+</style>
+</head>
+<body class="bg-gradient-to-br from-pink-50 to-purple-50 min-h-screen">
+<div class="max-w-2xl mx-auto p-4">
+  <header class="text-center py-6">
+    <h1 class="text-2xl font-bold text-purple-800">体型スリーサイズ目標設定ツール</h1>
+    <p class="text-sm text-gray-500 mt-1">バスト・ウエスト・ヒップの目標を設定しましょう</p>
+  </header>
+
+  <!-- Tabs -->
+  <div class="flex gap-2 mb-4" role="tablist">
+    <button id="tab-input" role="tab" aria-selected="true" aria-controls="panel-input"
+      class="tab-btn flex-1 py-2 rounded-lg bg-purple-600 text-white font-medium text-sm"
+      onclick="showTab('input')">測定入力</button>
+    <button id="tab-history" role="tab" aria-selected="false" aria-controls="panel-history"
+      class="tab-btn flex-1 py-2 rounded-lg bg-white text-purple-600 font-medium text-sm border border-purple-200"
+      onclick="showTab('history')">履歴・グラフ</button>
+    <button id="tab-exercise" role="tab" aria-selected="false" aria-controls="panel-exercise"
+      class="tab-btn flex-1 py-2 rounded-lg bg-white text-purple-600 font-medium text-sm border border-purple-200"
+      onclick="showTab('exercise')">エクササイズ</button>
+  </div>
+
+  <!-- Input Panel -->
+  <div id="panel-input" role="tabpanel" aria-labelledby="tab-input">
+    <div class="bg-white rounded-2xl shadow p-5 mb-4">
+      <h2 class="font-bold text-purple-700 mb-4 text-lg">現在のサイズ入力</h2>
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1" for="bust-current">バスト (cm)</label>
+          <input id="bust-current" type="number" min="50" max="150" placeholder="85"
+            class="w-full border border-gray-200 rounded-lg p-2 text-center text-lg focus:ring-2 focus:ring-purple-300 outline-none"
+            aria-label="現在のバスト(cm)">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1" for="waist-current">ウエスト (cm)</label>
+          <input id="waist-current" type="number" min="40" max="130" placeholder="65"
+            class="w-full border border-gray-200 rounded-lg p-2 text-center text-lg focus:ring-2 focus:ring-purple-300 outline-none"
+            aria-label="現在のウエスト(cm)">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1" for="hip-current">ヒップ (cm)</label>
+          <input id="hip-current" type="number" min="60" max="150" placeholder="90"
+            class="w-full border border-gray-200 rounded-lg p-2 text-center text-lg focus:ring-2 focus:ring-purple-300 outline-none"
+            aria-label="現在のヒップ(cm)">
+        </div>
+      </div>
+      <h2 class="font-bold text-purple-700 mb-4 text-lg">目標サイズ</h2>
+      <div class="grid grid-cols-3 gap-3 mb-5">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1" for="bust-goal">バスト目標</label>
+          <input id="bust-goal" type="number" min="50" max="150" placeholder="83"
+            class="w-full border border-pink-200 rounded-lg p-2 text-center text-lg focus:ring-2 focus:ring-pink-300 outline-none bg-pink-50"
+            aria-label="目標バスト(cm)">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1" for="waist-goal">ウエスト目標</label>
+          <input id="waist-goal" type="number" min="40" max="130" placeholder="60"
+            class="w-full border border-pink-200 rounded-lg p-2 text-center text-lg focus:ring-2 focus:ring-pink-300 outline-none bg-pink-50"
+            aria-label="目標ウエスト(cm)">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1" for="hip-goal">ヒップ目標</label>
+          <input id="hip-goal" type="number" min="60" max="150" placeholder="88"
+            class="w-full border border-pink-200 rounded-lg p-2 text-center text-lg focus:ring-2 focus:ring-pink-300 outline-none bg-pink-50"
+            aria-label="目標ヒップ(cm)">
+        </div>
+      </div>
+      <button onclick="saveMeasurement()"
+        class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition"
+        aria-label="測定値を保存する">
+        測定値を保存 &amp; 分析
+      </button>
+    </div>
+
+    <!-- Analysis Results -->
+    <div id="analysis" class="hidden bg-white rounded-2xl shadow p-5 mb-4">
+      <h2 class="font-bold text-purple-700 mb-4 text-lg">分析結果</h2>
+      <div id="ratio-section" class="mb-4"></div>
+      <div id="progress-section" class="mb-4"></div>
+      <div id="badges-section"></div>
+    </div>
+
+    <p class="text-xs text-gray-400 text-center px-4">
+      ⚕️ 健康的な範囲について医師に相談してください。このツールは参考情報の提供のみを目的としています。
+    </p>
+  </div>
+
+  <!-- History Panel -->
+  <div id="panel-history" class="hidden" role="tabpanel" aria-labelledby="tab-history">
+    <div class="bg-white rounded-2xl shadow p-5 mb-4">
+      <h2 class="font-bold text-purple-700 mb-4 text-lg">測定履歴</h2>
+      <div id="history-list" class="space-y-3"></div>
+    </div>
+    <div class="bg-white rounded-2xl shadow p-5">
+      <h2 class="font-bold text-purple-700 mb-4 text-lg">トレンドグラフ</h2>
+      <canvas id="trend-chart" width="600" height="200" class="w-full" aria-label="測定トレンドグラフ"></canvas>
+      <div class="flex gap-4 justify-center mt-2 text-xs">
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-pink-500 inline-block"></span>バスト</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-purple-500 inline-block"></span>ウエスト</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-indigo-500 inline-block"></span>ヒップ</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exercise Panel -->
+  <div id="panel-exercise" class="hidden" role="tabpanel" aria-labelledby="tab-exercise">
+    <div id="exercise-list" class="space-y-4"></div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'body-measurements-v1';
+const GOALS_KEY = 'body-goals-v1';
+
+function getData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
+}
+function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+function getGoals() {
+  try { return JSON.parse(localStorage.getItem(GOALS_KEY)) || {}; } catch { return {}; }
+}
+function saveGoals(g) { localStorage.setItem(GOALS_KEY, JSON.stringify(g)); }
+
+function showTab(name) {
+  ['input','history','exercise'].forEach(t => {
+    const p = document.getElementById('panel-' + t);
+    const btn = document.getElementById('tab-' + t);
+    if (t === name) {
+      p.classList.remove('hidden');
+      btn.classList.remove('bg-white','text-purple-600','border','border-purple-200');
+      btn.classList.add('bg-purple-600','text-white');
+      btn.setAttribute('aria-selected','true');
+    } else {
+      p.classList.add('hidden');
+      btn.classList.add('bg-white','text-purple-600','border','border-purple-200');
+      btn.classList.remove('bg-purple-600','text-white');
+      btn.setAttribute('aria-selected','false');
+    }
+  });
+  if (name === 'history') renderHistory();
+  if (name === 'exercise') renderExercise();
+}
+
+function getVal(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+function saveMeasurement() {
+  const bust = getVal('bust-current'), waist = getVal('waist-current'), hip = getVal('hip-current');
+  if (!bust || !waist || !hip) { alert('現在のサイズを全て入力してください。'); return; }
+  const bustG = getVal('bust-goal'), waistG = getVal('waist-goal'), hipG = getVal('hip-goal');
+
+  const goals = { bust: bustG || bust, waist: waistG || waist, hip: hipG || hip };
+  saveGoals(goals);
+
+  const records = getData();
+  records.push({ date: new Date().toISOString(), bust, waist, hip });
+  saveData(records);
+
+  renderAnalysis(bust, waist, hip, goals);
+  document.getElementById('analysis').classList.remove('hidden');
+}
+
+function renderAnalysis(bust, waist, hip, goals) {
+  const whRatio = (waist / hip).toFixed(2);
+  const wbRatio = (waist / bust).toFixed(2);
+  const isHealthy = whRatio < 0.8;
+
+  const ratioSection = document.getElementById('ratio-section');
+  ratioSection.innerHTML = '';
+
+  const ratioDiv = document.createElement('div');
+  ratioDiv.className = 'grid grid-cols-2 gap-3 mb-3';
+
+  const items = [
+    { label: 'ウエスト/ヒップ比', value: whRatio, good: whRatio < 0.8, tip: '< 0.8 が健康的' },
+    { label: 'ウエスト/バスト比', value: wbRatio, good: wbRatio < 0.75, tip: '< 0.75 が理想的' },
+  ];
+  items.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'rounded-xl p-3 ' + (item.good ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200');
+    const lbl = document.createElement('p'); lbl.className = 'text-xs text-gray-500'; lbl.textContent = item.label;
+    const val = document.createElement('p'); val.className = 'text-2xl font-bold ' + (item.good ? 'text-green-600' : 'text-yellow-600'); val.textContent = item.value;
+    const t = document.createElement('p'); t.className = 'text-xs text-gray-400'; t.textContent = item.tip;
+    card.appendChild(lbl); card.appendChild(val); card.appendChild(t);
+    ratioDiv.appendChild(card);
+  });
+
+  const healthBadge = document.createElement('div');
+  healthBadge.className = 'rounded-xl p-3 col-span-2 text-center ' + (isHealthy ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800');
+  healthBadge.textContent = isHealthy ? '✅ ウエスト/ヒップ比は健康的な範囲です' : '⚠️ ウエスト/ヒップ比が0.8を超えています';
+  ratioDiv.appendChild(healthBadge);
+  ratioSection.appendChild(ratioDiv);
+
+  // Progress bars
+  const prog = document.getElementById('progress-section');
+  prog.innerHTML = '';
+  const progTitle = document.createElement('h3'); progTitle.className = 'font-semibold text-gray-700 mb-3'; progTitle.textContent = '目標達成率';
+  prog.appendChild(progTitle);
+
+  const measurements = [
+    { label: 'バスト', current: bust, goal: goals.bust, color: 'bg-pink-500' },
+    { label: 'ウエスト', current: waist, goal: goals.waist, color: 'bg-purple-500' },
+    { label: 'ヒップ', current: hip, goal: goals.hip, color: 'bg-indigo-500' },
+  ];
+
+  measurements.forEach(m => {
+    const diff = Math.abs(m.current - m.goal);
+    const pct = m.current === m.goal ? 100 : Math.max(0, Math.min(100, 100 - (diff / Math.max(m.goal, 1)) * 100));
+    const row = document.createElement('div'); row.className = 'mb-3';
+    const info = document.createElement('div'); info.className = 'flex justify-between text-sm mb-1';
+    const lbl = document.createElement('span'); lbl.textContent = m.label;
+    const vals = document.createElement('span'); vals.className = 'text-gray-500';
+    vals.textContent = m.current + 'cm → 目標 ' + m.goal + 'cm (' + pct.toFixed(0) + '%)';
+    info.appendChild(lbl); info.appendChild(vals);
+    const track = document.createElement('div'); track.className = 'w-full bg-gray-100 rounded-full h-3';
+    const fill = document.createElement('div');
+    fill.className = 'bar-fill h-3 rounded-full ' + m.color;
+    fill.style.width = pct + '%';
+    fill.setAttribute('role', 'progressbar');
+    fill.setAttribute('aria-valuenow', pct.toFixed(0));
+    fill.setAttribute('aria-valuemin', '0');
+    fill.setAttribute('aria-valuemax', '100');
+    fill.setAttribute('aria-label', m.label + '達成率');
+    track.appendChild(fill);
+    row.appendChild(info); row.appendChild(track);
+    prog.appendChild(row);
+  });
+
+  // Badges
+  const badgesSection = document.getElementById('badges-section');
+  badgesSection.innerHTML = '';
+  const records = getData();
+  const badges = [];
+  if (records.length >= 1) badges.push({ icon: '🌟', text: '初回記録達成！' });
+  if (records.length >= 4) badges.push({ icon: '📅', text: '4週間継続！' });
+  if (records.length >= 8) badges.push({ icon: '🏆', text: '8週間のチャンピオン！' });
+  measurements.forEach(m => {
+    if (Math.abs(m.current - m.goal) < 1) badges.push({ icon: '🎯', text: m.label + 'の目標達成！' });
+  });
+
+  if (badges.length > 0) {
+    const bTitle = document.createElement('h3'); bTitle.className = 'font-semibold text-gray-700 mb-2'; bTitle.textContent = '獲得バッジ';
+    badgesSection.appendChild(bTitle);
+    const bRow = document.createElement('div'); bRow.className = 'flex flex-wrap gap-2';
+    badges.forEach(b => {
+      const badge = document.createElement('div');
+      badge.className = 'badge-shine bg-yellow-100 border border-yellow-300 rounded-full px-3 py-1 text-sm';
+      badge.textContent = b.icon + ' ' + b.text;
+      bRow.appendChild(badge);
+    });
+    badgesSection.appendChild(bRow);
+  }
+}
+
+function renderHistory() {
+  const records = getData();
+  const goals = getGoals();
+  const list = document.getElementById('history-list');
+  list.innerHTML = '';
+  if (records.length === 0) {
+    const p = document.createElement('p'); p.className = 'text-gray-400 text-center py-8'; p.textContent = '測定記録がありません';
+    list.appendChild(p); return;
+  }
+  [...records].reverse().forEach((r, i) => {
+    const d = new Date(r.date);
+    const card = document.createElement('div');
+    card.className = 'flex items-center gap-3 p-3 bg-gray-50 rounded-xl';
+    const dateDiv = document.createElement('div'); dateDiv.className = 'text-xs text-gray-400 w-20 shrink-0';
+    dateDiv.textContent = d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0');
+    const nums = document.createElement('div'); nums.className = 'flex gap-3 flex-wrap';
+    [['B', r.bust, 'text-pink-600'], ['W', r.waist, 'text-purple-600'], ['H', r.hip, 'text-indigo-600']].forEach(([lbl, val, cls]) => {
+      const span = document.createElement('span'); span.className = 'text-sm ' + cls;
+      span.textContent = lbl + ': ' + val + 'cm';
+      nums.appendChild(span);
+    });
+    card.appendChild(dateDiv); card.appendChild(nums);
+    list.appendChild(card);
+  });
+  drawTrendChart(records);
+}
+
+function drawTrendChart(records) {
+  const canvas = document.getElementById('trend-chart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  if (records.length < 2) {
+    ctx.fillStyle = '#9ca3af'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('2件以上の記録があるとグラフが表示されます', W/2, H/2); return;
+  }
+  const pad = { top: 20, right: 20, bottom: 30, left: 40 };
+  const all = records.flatMap(r => [r.bust, r.waist, r.hip]);
+  const minV = Math.min(...all) - 5, maxV = Math.max(...all) + 5;
+  const xStep = (W - pad.left - pad.right) / (records.length - 1);
+  const yScale = v => pad.top + (H - pad.top - pad.bottom) * (1 - (v - minV) / (maxV - minV));
+
+  ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (H - pad.top - pad.bottom) * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    const val = maxV - (maxV - minV) * i / 4;
+    ctx.fillStyle = '#9ca3af'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(val.toFixed(0), pad.left - 4, y + 4);
+  }
+
+  const lines = [
+    { key: 'bust', color: '#ec4899' },
+    { key: 'waist', color: '#a855f7' },
+    { key: 'hip', color: '#6366f1' },
+  ];
+  lines.forEach(({ key, color }) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    records.forEach((r, i) => {
+      const x = pad.left + i * xStep, y = yScale(r[key]);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    records.forEach((r, i) => {
+      const x = pad.left + i * xStep, y = yScale(r[key]);
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.fill();
+    });
+  });
+
+  ctx.fillStyle = '#9ca3af'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  records.forEach((r, i) => {
+    if (i === 0 || i === records.length - 1) {
+      const d = new Date(r.date);
+      ctx.fillText((d.getMonth()+1) + '/' + d.getDate(), pad.left + i * xStep, H - 5);
+    }
+  });
+}
+
+function renderExercise() {
+  const goals = getGoals();
+  const records = getData();
+  const last = records[records.length - 1];
+  const list = document.getElementById('exercise-list');
+  list.innerHTML = '';
+
+  const exercises = [];
+
+  if (!last) {
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-2xl shadow p-5';
+    const p = document.createElement('p'); p.className = 'text-gray-400 text-center py-4';
+    p.textContent = '先に測定値を入力してください';
+    card.appendChild(p); list.appendChild(card); return;
+  }
+
+  const waistGap = last.waist - goals.waist;
+  const hipGap = last.hip - goals.hip;
+  const bustGap = last.bust - goals.bust;
+
+  if (waistGap > 2) {
+    exercises.push({
+      area: 'ウエスト',
+      icon: '🔥',
+      color: 'bg-orange-50 border-orange-200',
+      titleColor: 'text-orange-700',
+      items: ['プランク: 30秒×3セット', 'バイシクルクランチ: 15回×3セット', 'ロシアンツイスト: 20回×3セット', 'ニーアップ: 10回×3セット']
+    });
+  }
+  if (hipGap > 2) {
+    exercises.push({
+      area: 'ヒップ',
+      icon: '💪',
+      color: 'bg-purple-50 border-purple-200',
+      titleColor: 'text-purple-700',
+      items: ['スクワット: 20回×3セット', 'ヒップリフト: 15回×3セット', 'ランジ: 10回（左右）×3セット', 'ドンキーキック: 15回（左右）×2セット']
+    });
+  }
+  if (bustGap < -2) {
+    exercises.push({
+      area: 'バスト',
+      icon: '✨',
+      color: 'bg-pink-50 border-pink-200',
+      titleColor: 'text-pink-700',
+      items: ['プッシュアップ: 10回×3セット', 'チェストプレス: 12回×3セット', 'フライ: 12回×3セット', 'ウォールプッシュアップ: 15回×2セット']
+    });
+  }
+
+  if (exercises.length === 0) {
+    exercises.push({
+      area: '全身維持',
+      icon: '🌈',
+      color: 'bg-green-50 border-green-200',
+      titleColor: 'text-green-700',
+      items: ['ウォーキング: 30分/日', 'ストレッチ: 朝晩10分', 'ヨガ: 週2回', '体幹トレーニング: 15分/日']
+    });
+  }
+
+  exercises.forEach(ex => {
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-2xl shadow p-5 border ' + ex.color;
+    const title = document.createElement('h3'); title.className = 'font-bold text-lg mb-3 ' + ex.titleColor;
+    title.textContent = ex.icon + ' ' + ex.area + 'ケアエクササイズ';
+    card.appendChild(title);
+    const ul = document.createElement('ul'); ul.className = 'space-y-2';
+    ex.items.forEach(item => {
+      const li = document.createElement('li'); li.className = 'flex items-center gap-2 text-sm text-gray-700';
+      const dot = document.createElement('span'); dot.className = 'w-2 h-2 rounded-full bg-gray-400 shrink-0';
+      li.appendChild(dot);
+      const txt = document.createElement('span'); txt.textContent = item;
+      li.appendChild(txt);
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
+    list.appendChild(card);
+  });
+
+  const notice = document.createElement('p');
+  notice.className = 'text-xs text-gray-400 text-center px-4 pb-4';
+  notice.textContent = '⚕️ 健康的な範囲について医師に相談してください。';
+  list.appendChild(notice);
+}
+</script>
+</body>
+</html>
